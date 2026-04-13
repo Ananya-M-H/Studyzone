@@ -6,9 +6,10 @@ import { createDeckFormSchema, validateField, topicSchema } from '../utils/valid
 
 interface CreateDeckProps {
   onDeckCreated: (deck: Deck) => Promise<void>;
+  showToast: (message: string, type: 'success' | 'error' | 'warning') => void;
 }
 
-export function CreateDeck({ onDeckCreated }: CreateDeckProps) {
+export function CreateDeck({ onDeckCreated,showToast }: CreateDeckProps) {
   const [topic, setTopic] = useState('');
   const [numQuestions, setNumQuestions] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,11 +63,15 @@ export function CreateDeck({ onDeckCreated }: CreateDeckProps) {
 
     try {
       const deck = await attemptGeneration(0);
+      console.log("🔥 GENERATED DECK:", deck);
       await onDeckCreated(deck);
+     
       setTopic('');
+       showToast('Deck generated successfully!', 'success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate deck';
       setError(`${message}. Please try again.`);
+      showToast(message ,'error')
     } finally {
       setIsLoading(false);
     }

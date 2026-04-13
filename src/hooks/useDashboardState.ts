@@ -108,6 +108,7 @@ export function useDashboardState(
   }, []);
 
   const createDeck = useCallback(async (newDeck: Deck) => {
+
     try {
       const {
         data: { user: currentUser },
@@ -117,7 +118,13 @@ export function useDashboardState(
       }
 
       const deckId = await saveDeck(newDeck, currentUser.id);
-      setDecks((prevDecks) => [{ ...newDeck, id: deckId }, ...prevDecks]);
+       console.log("🔥 SAVING DECK:", newDeck);
+      
+      setDecks((prev) => [
+  { ...newDeck, id: deckId, cards: newDeck.cards },
+  ...prev,
+]);
+  
     } catch (error) {
       console.error('Failed to save deck:', error);
       showToast('Failed to save deck. Please try again.', 'error');
@@ -138,11 +145,12 @@ export function useDashboardState(
 
         await updateDeckService(deckId, updates, currentUser.id);
 
-        setDecks((prevDecks) =>
+        setDecks((prevDecks) => 
+          
           prevDecks.map((deck) =>
             deck.id === deckId ? { ...deck, ...updates } : deck
           )
-        );
+      );
         setSelectedDeck((prevDeck) =>
           prevDeck?.id === deckId ? { ...prevDeck, ...updates } : prevDeck
         );

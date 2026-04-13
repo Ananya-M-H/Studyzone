@@ -165,3 +165,15 @@ This project is licensed under the MIT License - see the LICENSE file for detail
     <img src="https://img.shields.io/github/stars/kiendoantrung/gemini-flashcards.svg?style=for-the-badge&label=Star&logo=github" alt="Star on GitHub"/>
   </a>
 </p>
+
+
+
+//to run
+
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+irm get.scoop.sh | iex
+
+scoop install supabase
+
+supabase login
+

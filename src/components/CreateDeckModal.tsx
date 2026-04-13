@@ -11,8 +11,14 @@ interface CreateDeckModalProps {
   className?: string;
 }
 
+
+
 export function CreateDeckModal({ isOpen, onClose, onDeckCreated }: CreateDeckModalProps) {
   const [activeTab, setActiveTab] = useState<'create' | 'upload'>('create');
+
+   const showToast = (message: string, type: 'success' | 'error' | 'warning') => {
+    alert(`${type.toUpperCase()}: ${message}`);
+  };
 
   if (!isOpen) return null;
 
@@ -68,7 +74,11 @@ export function CreateDeckModal({ isOpen, onClose, onDeckCreated }: CreateDeckMo
                 <span className="w-10 h-10 rounded-neo-md bg-neo-green/20 border-2 border-neo-border flex items-center justify-center text-neo-green font-bold text-sm">AI</span>
                 Generate with AI
               </h3>
-              <CreateDeck onDeckCreated={handleDeckCreated} />
+               <CreateDeck
+                onDeckCreated={handleDeckCreated}
+                showToast={showToast}
+              />
+          
             </div>
             <div className="bg-white rounded-neo-lg p-6 border-2 border-neo-border shadow-neo hover:shadow-neo-hover transition-all">
               <h3 className="text-lg font-heading font-bold text-neo-charcoal mb-4 flex items-center gap-2">
@@ -83,7 +93,8 @@ export function CreateDeckModal({ isOpen, onClose, onDeckCreated }: CreateDeckMo
           <div className="md:hidden">
             <div className="bg-white rounded-neo-lg p-6 border-2 border-neo-border shadow-neo">
               {activeTab === 'create' ? (
-                <CreateDeck onDeckCreated={handleDeckCreated} />
+                <CreateDeck onDeckCreated={handleDeckCreated}
+                  showToast={showToast}  />
               ) : (
                 <FileUploadDeck onDeckCreated={handleDeckCreated} />
               )}

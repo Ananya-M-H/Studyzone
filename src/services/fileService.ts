@@ -1,6 +1,8 @@
 import { supabase } from "../lib/supabase";
 import type { Flashcard } from "../types/flashcard";
 import { withRetry } from "../utils/retry";
+import { USE_MOCK_AI } from "../config/env";
+import { mockGenerateFromFile } from "./aiService.mock";
 
 
 export async function extractTextFromFile(file: File): Promise<string> {
@@ -87,38 +89,41 @@ export async function extractTextFromFile(file: File): Promise<string> {
   return await file.text();
 }
 
-export async function generateQAFromText(
-  text: string,
-  numQuestions: number = 10
-): Promise<Array<Omit<Flashcard, "id">>> {
-  try {
-    const { data, error } = await withRetry(
-      () => supabase.functions.invoke("generate-flashcards", {
-        body: {
-          action: "generateFromText",
-          text,
-          numQuestions,
-        },
-      }),
-      'generateQAFromText'
-    );
 
-    if (error) {
-      throw new Error(`Edge function error: ${error.message}`);
-    }
+//______________________________________________________________
+//Woking one (Don't touch)
+// export async function generateQAFromText(
+//   text: string,
+//   numQuestions: number = 10
+// ): Promise<Array<Omit<Flashcard, "id">>> {
+//   try {
+//     const { data, error } = await withRetry(
+//       () => supabase.functions.invoke("generate-flashcards", {
+//         body: {
+//           action: "generateFromText",
+//           text,
+//           numQuestions,
+//         },
+//       }),
+//       'generateQAFromText'
+//     );
 
-    if (data.error) {
-      throw new Error(data.error);
-    }
+//     if (error) {
+//       throw new Error(`Edge function error: ${error.message}`);
+//     }
 
-    return data as Array<Omit<Flashcard, "id">>;
-  } catch (error: unknown) {
-    throw new Error(
-      `Failed to generate questions from content: ${(error as Error).message}`
-    );
-  }
-}
+//     if (data.error) {
+//       throw new Error(data.error);
+//     }
 
+//     return data as Array<Omit<Flashcard, "id">>;
+//   } catch (error: unknown) {
+//     throw new Error(
+//       `Failed to generate questions from content: ${(error as Error).message}`
+//     );
+//   }
+// }
+//___________________________________________________________
 // Helper function to convert File to base64
 async function fileToBase64(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
@@ -130,37 +135,103 @@ async function fileToBase64(file: File): Promise<string> {
   return btoa(binary);
 }
 
+
+//___________________________________________________________________________
+//Woking dont' touch
+
 // Generate flashcards directly from PDF using Edge Function
+// export async function generateQAFromPDF(
+//   file: File,
+//   numQuestions: number = 10
+// ): Promise<Array<Omit<Flashcard, "id">>> {
+//   const base64Data = await fileToBase64(file);
+
+//   try {
+//     const { data, error } = await withRetry(
+//       () => supabase.functions.invoke("generate-flashcards", {
+//         body: {
+//           action: "generateFromPDF",
+//           pdfBase64: base64Data,
+//           numQuestions,
+//         },
+//       }),
+//       'generateQAFromPDF'
+//     );
+
+//     if (error) {
+//       throw new Error(`Edge function error: ${error.message}`);
+//     }
+
+//     if (data.error) {
+//       throw new Error(data.error);
+//     }
+
+//     return data as Array<Omit<Flashcard, "id">>;
+//   } catch (error: unknown) {
+//     throw new Error(
+//       `Failed to generate questions from PDF: ${(error as Error).message}`
+//     );
+//   }
+// }
+
+
+//_________________________________________________________________________
+export async function generateQAFromText(
+  text: string,
+  numQuestions: number = 10
+): Promise<Array<Omit<Flashcard, "id">>> {
+
+  // ✅ MOCK MODE
+  if (USE_MOCK_AI) {
+    console.log("🔥 MOCK FILE TEXT USED");
+    return mockGenerateFromFile(numQuestions);
+  }
+
+  // ❌ REAL API
+  const { data, error } = await withRetry(
+    () => supabase.functions.invoke("generate-flashcards", {
+      body: {
+        action: "generateFromText",
+        text,
+        numQuestions,
+      },
+    }),
+    'generateQAFromText'
+  );
+
+  if (error) throw new Error(error.message);
+  if (data.error) throw new Error(data.error);
+
+  return data;
+}
+
+
 export async function generateQAFromPDF(
   file: File,
   numQuestions: number = 10
 ): Promise<Array<Omit<Flashcard, "id">>> {
+
+  // ✅ MOCK MODE
+  if (USE_MOCK_AI) {
+    console.log("🔥 MOCK PDF USED");
+    return mockGenerateFromFile(numQuestions);
+  }
+
   const base64Data = await fileToBase64(file);
 
-  try {
-    const { data, error } = await withRetry(
-      () => supabase.functions.invoke("generate-flashcards", {
-        body: {
-          action: "generateFromPDF",
-          pdfBase64: base64Data,
-          numQuestions,
-        },
-      }),
-      'generateQAFromPDF'
-    );
+  const { data, error } = await withRetry(
+    () => supabase.functions.invoke("generate-flashcards", {
+      body: {
+        action: "generateFromPDF",
+        pdfBase64: base64Data,
+        numQuestions,
+      },
+    }),
+    'generateQAFromPDF'
+  );
 
-    if (error) {
-      throw new Error(`Edge function error: ${error.message}`);
-    }
+  if (error) throw new Error(error.message);
+  if (data.error) throw new Error(data.error);
 
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    return data as Array<Omit<Flashcard, "id">>;
-  } catch (error: unknown) {
-    throw new Error(
-      `Failed to generate questions from PDF: ${(error as Error).message}`
-    );
-  }
+  return data;
 }

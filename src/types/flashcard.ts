@@ -9,6 +9,7 @@ export interface Deck {
   title: string;
   description: string;
   cards: Flashcard[];
+  topic: string;
 }
 
 export interface QuizAnswer {

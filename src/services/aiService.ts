@@ -160,7 +160,84 @@ export async function generateDeck(topic: string, numQuestions: number) {
 }
 
 
+import type { Flashcard } from "../types/flashcard";
+import { withRetry } from "../utils/retry";
 
+export async function generateBatchDistractors(
+  cards: Flashcard[]
+): Promise<Record<string, string[]>> {
+
+  if (!cards.length) return {};
+
+  // ✅ MOCK MODE
+  if (USE_MOCK_AI) {
+    console.log("🔥 MOCK DISTRACTORS");
+
+    const result: Record<string, string[]> = {};
+
+    cards.forEach((card) => {
+      result[card.id] = [
+        `Wrong Option 1 for ${card.front}`,
+        `Wrong Option 2 for ${card.front}`,
+        `Wrong Option 3 for ${card.front}`,
+      ];
+    });
+
+    return result;
+  }
+
+  // ✅ REAL MODE (RESTORED)
+  try {
+    const chunkSize = 10;
+
+    const chunks: Flashcard[][] = [];
+    for (let i = 0; i < cards.length; i += chunkSize) {
+      chunks.push(cards.slice(i, i + chunkSize));
+    }
+
+    const results = await Promise.all(
+      chunks.map((chunk) =>
+        withRetry(
+          async () => {
+            const { data, error } = await supabase.functions.invoke(
+              FUNCTION_NAME,
+              {
+                body: {
+                  action: "generateDistractors",
+                  cards: chunk.map((c) => ({
+                    id: c.id,
+                    front: c.front,
+                    back: c.back,
+                  })),
+                },
+              }
+            );
+
+            if (error) {
+              throw new Error(`Failed to generate distractors: ${error.message}`);
+            }
+
+            if (!data) {
+              throw new Error("No data received for distractors");
+            }
+
+            if (data.error) {
+              throw new Error(data.error);
+            }
+
+            return data as Record<string, string[]>;
+          },
+          "generateDistractors"
+        )
+      )
+    );
+
+    return results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+  } catch (err) {
+    console.error("Error generating distractors:", err);
+    return {};
+  }
+}
 
 
 
@@ -245,64 +322,70 @@ export async function generateDeck(topic: string, numQuestions: number) {
 // ============================================================================
 // Generate Distractors (Batch)
 // ============================================================================
-import type { Flashcard } from "../types/flashcard";
-import { withRetry } from "../utils/retry";
-//const FUNCTION_NAME = "generate-flashcards";
 
-export async function generateBatchDistractors(
-  cards: Flashcard[]
-): Promise<Record<string, string[]>> {
-  if (!cards.length) return {};
 
-  try {
-    const chunkSize = 10;
+//Working__________________________________________________________
+// import type { Flashcard } from "../types/flashcard";
+// import { withRetry } from "../utils/retry";
+// //const FUNCTION_NAME = "generate-flashcards";
 
-    const chunks: Flashcard[][] = [];
-    for (let i = 0; i < cards.length; i += chunkSize) {
-      chunks.push(cards.slice(i, i + chunkSize));
-    }
+// export async function generateBatchDistractors(
+//   cards: Flashcard[]
+// ): Promise<Record<string, string[]>> {
+//   if (!cards.length) return {};
 
-    const results = await Promise.all(
-      chunks.map((chunk) =>
-        withRetry(
-          async () => {
-            const { data, error } = await supabase.functions.invoke(
-              FUNCTION_NAME,
-              {
-                body: {
-                  action: "generateDistractors",
-                  cards: chunk.map((c) => ({
-                    id: c.id,
-                    front: c.front,
-                    back: c.back,
-                  })),
-                },
-              }
-            );
+//   try {
+//     const chunkSize = 10;
 
-            if (error) {
-              throw new Error(`Failed to generate distractors: ${error.message}`);
-            }
+//     const chunks: Flashcard[][] = [];
+//     for (let i = 0; i < cards.length; i += chunkSize) {
+//       chunks.push(cards.slice(i, i + chunkSize));
+//     }
 
-            if (!data) {
-              throw new Error("No data received for distractors");
-            }
+//     const results = await Promise.all(
+//       chunks.map((chunk) =>
+//         withRetry(
+//           async () => {
+//             const { data, error } = await supabase.functions.invoke(
+//               FUNCTION_NAME,
+//               {
+//                 body: {
+//                   action: "generateDistractors",
+//                   cards: chunk.map((c) => ({
+//                     id: c.id,
+//                     front: c.front,
+//                     back: c.back,
+//                   })),
+//                 },
+//               }
+//             );
 
-            if (data.error) {
-              throw new Error(data.error);
-            }
+//             if (error) {
+//               throw new Error(`Failed to generate distractors: ${error.message}`);
+//             }
 
-            return data as Record<string, string[]>;
-          },
-          "generateDistractors"
-        )
-      )
-    );
+//             if (!data) {
+//               throw new Error("No data received for distractors");
+//             }
 
-    // Merge all chunk results
-    return results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
-  } catch (err) {
-    console.error("Error generating distractors:", err);
-    return {};
-  }
-}
+//             if (data.error) {
+//               throw new Error(data.error);
+//             }
+
+//             return data as Record<string, string[]>;
+//           },
+//           "generateDistractors"
+//         )
+//       )
+//     );
+
+//     // Merge all chunk results
+//     return results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+//   } catch (err) {
+//     console.error("Error generating distractors:", err);
+//     return {};
+//   }
+// }
+
+
+//___________________________________________________________________

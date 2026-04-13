@@ -138,6 +138,41 @@ export function QuizMode({ deck, onExit }: QuizModeProps) {
       }, 1500);
     }
   };
+ 
+
+  const handleAnswerFeedback = (feedback: Difficulty) => {
+  const currentCard = deck.cards[currentIndex];
+  if (!currentCard) return;
+
+  // ✅ Save performance
+  setPerformanceMap((prev) => ({
+    ...prev,
+    [currentCard.id]: feedback,
+  }));
+
+  // ✅ Calculate next difficulty
+  const nextDifficulty = getNextDifficulty(currentDifficulty, feedback);
+  setCurrentDifficulty(nextDifficulty);
+
+  console.log("📊 Feedback:", feedback);
+  console.log("🎯 Next Difficulty:", nextDifficulty);
+
+  // ✅ Find next matching card
+  const nextIndex = deck.cards.findIndex(
+    (card, idx) =>
+      idx > currentIndex &&
+      performanceMap[card.id] === nextDifficulty
+  );
+
+  if (nextIndex !== -1) {
+    setCurrentIndex(nextIndex);
+  } else {
+    // fallback → next card
+    setCurrentIndex((prev) =>
+      prev < deck.cards.length - 1 ? prev + 1 : prev
+    );
+  }
+};
 
   const score = answers.filter(a => a.isCorrect).length;
   const totalQuestions = shuffledCards.length;
@@ -188,6 +223,7 @@ export function QuizMode({ deck, onExit }: QuizModeProps) {
             );
 
             return (
+              
               <div
                 key={card.id}
                 className="bg-white rounded-neo-lg border-2 border-neo-border overflow-hidden shadow-neo hover:shadow-neo-hover transition-all"

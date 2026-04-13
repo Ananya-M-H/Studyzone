@@ -82,31 +82,51 @@ export function getCurrentUser() {
   return supabase.auth.getUser();
 }
 
-export async function updateProfile(updates: { name?: string; avatar_url?: string | null }) {
-  const { data: { user }, error } = await supabase.auth.updateUser({
-    data: updates
+
+export async function updateProfile(data: {
+  name?: string;
+  avatar_url?: string;
+}) {
+  const { data: result, error } = await supabase.auth.updateUser({
+    data: {
+      name: data.name,
+      avatar_url: data.avatar_url,
+    },
   });
 
-  if (error) throw error;
-  if (!user) throw new Error('User not found after profile update');
+  if (error) {
+    console.error("🔥 Supabase error:", error);
+    throw error;
+  }
 
-  // Keep profile table in sync with auth metadata
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .upsert(
-      {
-        id: user.id,
-        ...updates
-      },
-      {
-        onConflict: 'id'
-      }
-    );
-
-  if (profileError) throw profileError;
-
-  return { user };
+  return result;
 }
+
+// export async function updateProfile(updates: { name?: string; avatar_url?: string | null }) {
+//   const { data: { user }, error } = await supabase.auth.updateUser({
+//     data: updates
+//   });
+
+//   if (error) throw error;
+//   if (!user) throw new Error('User not found after profile update');
+
+//   // Keep profile table in sync with auth metadata
+//   const { error: profileError } = await supabase
+//     .from('profiles')
+//     .upsert(
+//       {
+//         id: user.id,
+//         ...updates
+//       },
+//       {
+//         onConflict: 'id'
+//       }
+//     );
+
+//   if (profileError) throw profileError;
+
+//   return { user };
+// }
 
 export async function updatePassword(password: string) {
   const { data, error } = await supabase.auth.updateUser({

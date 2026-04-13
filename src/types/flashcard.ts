@@ -1,8 +1,18 @@
+
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
 export interface Flashcard {
   id: string;
   front: string;
   back: string;
+  difficulty: Difficulty; // ✅ NEW
 }
+
+// export interface Flashcard {
+//   id: string;
+//   front: string;
+//   back: string;
+// }
 
 export interface Deck {
   id: string;

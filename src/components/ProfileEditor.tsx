@@ -44,7 +44,11 @@ export function ProfileEditor({ user, onUpdate, onClose }: ProfileEditorProps) {
       onUpdate();
       onClose();
     } catch (err) {
-      console.error('Failed to update profile:', err);
+      //console.error('Failed to update profile:', err);
+      console.error("🔥 FULL ERROR:", JSON.stringify(err, null, 2));
+      if (err instanceof Error) {
+  console.error("🔥 MESSAGE:", err.message);
+}
       setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setIsLoading(false);

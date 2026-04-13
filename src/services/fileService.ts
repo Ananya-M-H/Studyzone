@@ -173,9 +173,8 @@ async function fileToBase64(file: File): Promise<string> {
 //     );
 //   }
 // }
-
-
-//_________________________________________________________________________
+//_
+//________________________________________________________________________
 export async function generateQAFromText(
   text: string,
   numQuestions: number = 10

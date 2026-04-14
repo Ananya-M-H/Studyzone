@@ -217,7 +217,7 @@ export async function generateQAFromPDF(
   }
 
   const base64Data = await fileToBase64(file);
-
+  
   const { data, error } = await withRetry(
     () => supabase.functions.invoke("generate-flashcards", {
       body: {
@@ -234,3 +234,4 @@ export async function generateQAFromPDF(
 
   return data;
 }
+

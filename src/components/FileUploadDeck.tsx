@@ -31,20 +31,29 @@ export function FileUploadDeck({ onDeckCreated }: FileUploadDeckProps) {
     try {
       if (type === 'text') {
         let cards;
-        
+
         // Use Gemini's native PDF support for PDF files
         if (file.type === 'application/pdf') {
           cards = await generateQAFromPDF(file, numQuestions);
         } else {
           const text = await extractTextFromFile(file);
           cards = await generateQAFromText(text, numQuestions);
+
+          cards= cards.map(card => ({
+            ...card,
+            id: crypto.randomUUID(),
+            difficulty: 'medium' // ✅ default value
+          }))
         }
-        
+    
         const deck: Deck = {
           id: crypto.randomUUID(),
           title: file.name.split('.')[0],
           description: `AI-generated from ${file.name}`,
-          cards: cards.map(card => ({ ...card, id: crypto.randomUUID() }))
+          topic:'General',
+          cards: cards.map(card => ({ ...card, 
+            id: crypto.randomUUID() ,
+          difficulty:'medium'}))
         };
         
         if (deck.cards.length === 0) {
@@ -63,7 +72,8 @@ export function FileUploadDeck({ onDeckCreated }: FileUploadDeckProps) {
             return {
               id: crypto.randomUUID(),
               front: question.replace('Q: ', '').trim(),
-              back: answer.replace('A: ', '').trim()
+              back: answer.replace('A: ', '').trim(),
+              difficulty: 'medium'
             };
           })
           .filter(card => card.front && card.back); // Filter out empty cards

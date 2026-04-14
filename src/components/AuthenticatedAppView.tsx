@@ -45,8 +45,55 @@ export function AuthenticatedAppView({
   onStopEditing,
   onExitStudyMode,
 }: AuthenticatedAppViewProps) {
+
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [isCreateDeckModalOpen, setIsCreateDeckModalOpen] = useState(false);
+  // 🔥 Calculate average difficulty
+const getAverageDifficulty = (
+  performanceMap: Record<string, 'easy' | 'medium' | 'hard'>
+): 'easy' | 'medium' | 'hard' => {
+  const values = Object.values(performanceMap);
+
+  if (values.length === 0) return 'medium';
+
+  const scoreMap = {
+    easy: 1,
+    medium: 2,
+    hard: 3,
+  };
+
+  const avg =
+    values.reduce((sum, val) => sum + scoreMap[val], 0) /
+    values.length;
+
+  if (avg < 1.8) return 'easy';
+  if (avg < 2.5) return 'medium';
+  return 'hard';
+};
+
+// 🔥 Handle next deck generation
+const handleGenerateNextDeck = async (
+  performanceMap: Record<string, 'easy' | 'medium' | 'hard'>
+) => {
+  if (!selectedDeck) return;
+
+  const difficulty = getAverageDifficulty(performanceMap);
+
+  console.log('📊 Final Performance:', performanceMap);
+  console.log('🎯 Next Difficulty:', difficulty);
+
+  // 🚀 TEMP: Just log (later connect Gemini API)
+  // Example:
+  // await generateDeck(selectedDeck.topic, 10, difficulty);
+
+//  alert(`Next deck difficulty: ${difficulty}`);
+ // await generateDeck(topic, numQuestions, difficulty);
+
+
+
+  // Optional: exit study mode
+  onExitStudyMode();
+};
 
   return (
     <div className="min-h-screen bg-neo-cream flex flex-col">
@@ -85,7 +132,12 @@ export function AuthenticatedAppView({
             />
           </Suspense>
         ) : selectedDeck ? (
-          <StudyMode deck={selectedDeck} onExit={onExitStudyMode} />
+          <StudyMode 
+          deck={selectedDeck}
+           onExit={onExitStudyMode}
+          onFinishStudy={handleGenerateNextDeck}
+          
+            />
         ) : (
           <>
             <div className="mb-12 text-center">

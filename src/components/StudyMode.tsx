@@ -1,15 +1,15 @@
-import { useState, useCallback, useEffect,useMemo} from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw, CheckCircle } from 'lucide-react';
 import type { Deck } from '../types/flashcard';
 import { FlashCard } from './FlashCard';
 import { QuizMode } from './QuizMode';
 
-type Difficulty = 'easy' | 'medium' | 'hard';
+ type Difficulty = 'easy' | 'medium' | 'hard';
 
-interface StudyModeProps {
-  deck: Deck;
-  onExit: () => void;
-}
+// interface StudyModeProps {
+//   deck: Deck;
+//   onExit: () => void;
+// }
 
 // export function StudyMode({ deck, onExit }: StudyModeProps) {
 //   const [currentIndex, setCurrentIndex] = useState(0);
@@ -131,7 +131,7 @@ interface StudyModeProps {
 //             className="flex items-center gap-2 px-6 py-3 rounded-full font-bold border-2 border-neo-border bg-neo-accent-blue text-neo-charcoal shadow-neo hover:shadow-neo-hover hover:translate-x-[-2px] hover:translate-y-[-2px] active:shadow-neo-active active:translate-x-[1px] active:translate-y-[1px] transition-all"
 //           >
 //             <CheckCircle className="w-4 h-4" />
-//             Take Quiz
+//             Quiz
 //           </button>
 //         )}
 //       </div>
@@ -143,36 +143,37 @@ interface StudyModeProps {
 interface StudyModeProps {
   deck: Deck;
   onExit: () => void;
+  onFinishStudy: (performanceMap: Record<string, Difficulty>) => void;
 }
 
-export function StudyMode({ deck, onExit }: StudyModeProps) {
+export function StudyMode({ deck, onExit,onFinishStudy }: StudyModeProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
 
 
   type Difficulty = 'easy' | 'medium' | 'hard';
- 
- 
+
+
   // 🔥 Global difficulty level (for next API call later)
   const [currentDifficulty, setCurrentDifficulty] = useState<Difficulty>('medium');
-   const [performanceMap, setPerformanceMap] = useState<
-  Record<string, Difficulty>
->({});
-  
-const sortedCards = useMemo(() => {
-  return [...deck.cards].sort((a, b) => {
+  const [performanceMap, setPerformanceMap] = useState<
+    Record<string, Difficulty>
+  >({});
+
+   const sortedCards = useMemo(() => {
+  const cards = deck.cards ?? [];
+
+  return [...cards].sort((a, b) => {
     const score = (d: Difficulty) => {
       if (d === 'hard') return 3;
       if (d === 'medium') return 2;
       return 1;
     };
 
-    const aScore = score(a.difficulty);
-    const bScore = score(b.difficulty);
-
-    return aScore - bScore; // easy → hard
+    return score(a.difficulty) - score(b.difficulty);
   });
 }, [deck.cards]);
+
 
 
 
@@ -191,26 +192,26 @@ const sortedCards = useMemo(() => {
   }, [cardCount]);
 
   const getNextDifficulty = (
-  current: Difficulty,
-  feedback: Difficulty
-): Difficulty => {
-  if (feedback === 'easy') {
-    if (current === 'easy') return 'medium';
-    if (current === 'medium') return 'hard';
-    return 'hard';
-  }
+    current: Difficulty,
+    feedback: Difficulty
+  ): Difficulty => {
+    if (feedback === 'easy') {
+      if (current === 'easy') return 'medium';
+      if (current === 'medium') return 'hard';
+      return 'hard';
+    }
 
-  if (feedback === 'hard') {
-    if (current === 'hard') return 'medium';
-    if (current === 'medium') return 'easy';
-    return 'easy';
-  }
+    if (feedback === 'hard') {
+      if (current === 'hard') return 'medium';
+      if (current === 'medium') return 'easy';
+      return 'easy';
+    }
 
-  return current; // medium stays same
-};
+    return current; // medium stays same
+  };
 
 
- const handleAnswerFeedback = (feedback: Difficulty) => {
+  const handleAnswerFeedback = (feedback: Difficulty) => {
     const currentCard = sortedCards[currentIndex];
     if (!currentCard) return;
 
@@ -219,92 +220,92 @@ const sortedCards = useMemo(() => {
       ...prev,
       [currentCard.id]: feedback,
     }));
-     console.log('Feedback:', feedback);
+    console.log('Feedback:', feedback);
 
     // ✅ Compute next difficulty
-  //   const nextDifficulty = getNextDifficulty(
-  //     currentDifficulty,
-  //     feedback
-  //   );
-  //   setCurrentDifficulty(nextDifficulty);
+    //   const nextDifficulty = getNextDifficulty(
+    //     currentDifficulty,
+    //     feedback
+    //   );
+    //   setCurrentDifficulty(nextDifficulty);
 
-  //   console.log('📊 Feedback:', feedback);
-  //   console.log('🎯 Next Difficulty:', nextDifficulty);
+    //   console.log('📊 Feedback:', feedback);
+    //   console.log('🎯 Next Difficulty:', nextDifficulty);
 
-  //   // ✅ Find next matching card
-  //   let nextIndex = deck.cards.findIndex(
-  //     (card, idx) =>
-  //       idx > currentIndex &&
-  //       card.difficulty === nextDifficulty
-  //   );
+    //   // ✅ Find next matching card
+    //   let nextIndex = deck.cards.findIndex(
+    //     (card, idx) =>
+    //       idx > currentIndex &&
+    //       card.difficulty === nextDifficulty
+    //   );
 
-  //    // ✅ 2. If not found → pick unseen card
-  // if (nextIndex === -1) {
-  //     nextIndex = deck.cards.findIndex(
-  //     (card, idx) =>
-  //       idx > currentIndex &&
-  //       !performanceMap[card.id]
-  //   );
-  // }
-  //  // 5. fallback → sequential
-  // if (nextIndex === -1) {
-  //   nextIndex =
-  //     currentIndex < deck.cards.length - 1
-  //       ? currentIndex + 1
-  //       : currentIndex;
-  // }
-       // 2. determine target difficulty
-  const nextDifficulty =
-    feedback === 'easy'
-      ? 'hard'
-      : feedback === 'hard'
-      ? 'easy'
-      : 'medium';
+    //    // ✅ 2. If not found → pick unseen card
+    // if (nextIndex === -1) {
+    //     nextIndex = deck.cards.findIndex(
+    //     (card, idx) =>
+    //       idx > currentIndex &&
+    //       !performanceMap[card.id]
+    //   );
+    // }
+    //  // 5. fallback → sequential
+    // if (nextIndex === -1) {
+    //   nextIndex =
+    //     currentIndex < deck.cards.length - 1
+    //       ? currentIndex + 1
+    //       : currentIndex;
+    // }
+    // 2. determine target difficulty
+    const nextDifficulty =
+      feedback === 'easy'
+        ? 'hard'
+        : feedback === 'hard'
+          ? 'easy'
+          : 'medium';
 
-  // 3. find next BEST match
-  // let nextIndex = sortedCards.findIndex(
-  //   (card, idx) =>
-  //     idx > currentIndex &&
-  //     card.difficulty === nextDifficulty &&
-  //     !performanceMap[card.id]
-  // );
-  let nextIndex = -1;
+    // 3. find next BEST match
+    // let nextIndex = sortedCards.findIndex(
+    //   (card, idx) =>
+    //     idx > currentIndex &&
+    //     card.difficulty === nextDifficulty &&
+    //     !performanceMap[card.id]
+    // );
+    let nextIndex = -1;
 
-// 🔥 ONLY check next 2–3 cards (NOT whole deck)
-for (let i = currentIndex + 1; i <= currentIndex + 3 && i < sortedCards.length; i++) {
-  const card = sortedCards[i];
+    // 🔥 ONLY check next 2–3 cards (NOT whole deck)
+    for (let i = currentIndex + 1; i <= currentIndex + 3 && i < sortedCards.length; i++) {
+      const card = sortedCards[i];
 
-  if (
-    card.difficulty === nextDifficulty &&
-    !performanceMap[card.id]
-  ) {
-    nextIndex = i;
-    break;
-  }
-}
-
-  // 4. fallback: unseen card
- if (nextIndex === -1) {
-  for (let i = currentIndex + 1; i < sortedCards.length; i++) {
-    if (!performanceMap[sortedCards[i].id]) {
-      nextIndex = i;
-      break;
+      if (
+        card.difficulty === nextDifficulty &&
+       // !performanceMap[card.id]
+       !(card.id in performanceMap)
+      ) {
+        nextIndex = i;
+        break;
+      }
     }
-  }
-}
 
-  // 5. final fallback
-  if (nextIndex === -1) {
-    nextIndex =
-      currentIndex < sortedCards.length - 1
-        ? currentIndex + 1
-        : currentIndex;
-  }
+    // 4. fallback: unseen card
+    if (nextIndex === -1) {
+      for (let i = currentIndex + 1; i < sortedCards.length; i++) {
+        if (!performanceMap[sortedCards[i].id]) {
+          nextIndex = i;
+          break;
+        }
+      }
+    }
+    // 5. final fallback
+    if (nextIndex === -1) {
+      nextIndex =
+        currentIndex < sortedCards.length - 1
+          ? currentIndex + 1
+          : currentIndex;
+    }
 
-  setCurrentIndex(nextIndex);
+    setCurrentIndex(nextIndex);
   };
 
-  
+
   // Safety check
   if (cardCount === 0) {
     return (
@@ -324,9 +325,9 @@ for (let i = currentIndex + 1; i <= currentIndex + 3 && i < sortedCards.length; 
       </div>
     );
   }
-   
+
   const currentCard = sortedCards[currentIndex];
-  
+
   if (!currentCard) return null;
 
   const isFirst = currentIndex === 0;
@@ -368,7 +369,7 @@ for (let i = currentIndex + 1; i <= currentIndex + 3 && i < sortedCards.length; 
         <FlashCard card={currentCard} />
       </div>
 
-     <div className="flex gap-3 justify-center mt-6">
+      <div className="flex gap-3 justify-center mt-6">
         <button onClick={() => handleAnswerFeedback('easy')}>
           Easy
         </button>
@@ -402,16 +403,25 @@ for (let i = currentIndex + 1; i <= currentIndex + 3 && i < sortedCards.length; 
           <ArrowRight className="inline w-4 h-4 ml-2" />
         </button>
 
-        {isLast && (
-          <button
-            onClick={() => setShowQuiz(true)}
-            className="px-6 py-3 bg-blue-200 border-2 rounded-full font-bold"
-          >
-            <CheckCircle className="inline w-4 h-4 mr-2" />
-            Take Quiz
-          </button>
+                {isLast && (
+          <>
+            <button
+              onClick={() => setShowQuiz(true)}
+              className="px-6 py-3 bg-blue-200 border-2 rounded-full font-bold"
+            >
+              <CheckCircle className="inline w-4 h-4 mr-2" />
+              Take Quiz
+            </button>
+
+            <button
+              onClick={() => onFinishStudy(performanceMap)}
+              className="px-6 py-3 bg-green-300 border-2 rounded-full font-bold"
+            >
+              Next Deck
+            </button>
+          </>
         )}
-      </div>
-    </div>
+      </div> 
+    </div>   
   );
 }

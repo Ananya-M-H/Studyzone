@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect,useMemo} from 'react';
 import { ArrowLeft, ArrowRight, RotateCcw, CheckCircle } from 'lucide-react';
 import type { Deck } from '../types/flashcard';
 import { FlashCard } from './FlashCard';
@@ -149,8 +149,8 @@ export function StudyMode({ deck, onExit }: StudyModeProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
 
-  // 🔥 Track difficulty per card
-  const [difficultyMap, setDifficultyMap] = useState<Record<string, Difficulty>>({});
+
+  type Difficulty = 'easy' | 'medium' | 'hard';
  
  
   // 🔥 Global difficulty level (for next API call later)
@@ -158,8 +158,25 @@ export function StudyMode({ deck, onExit }: StudyModeProps) {
    const [performanceMap, setPerformanceMap] = useState<
   Record<string, Difficulty>
 >({});
+  
+const sortedCards = useMemo(() => {
+  return [...deck.cards].sort((a, b) => {
+    const score = (d: Difficulty) => {
+      if (d === 'hard') return 3;
+      if (d === 'medium') return 2;
+      return 1;
+    };
 
-  const cardCount = deck.cards?.length ?? 0;
+    const aScore = score(a.difficulty);
+    const bScore = score(b.difficulty);
+
+    return aScore - bScore; // easy → hard
+  });
+}, [deck.cards]);
+
+
+
+  const cardCount = sortedCards?.length ?? 0;
 
   useEffect(() => {
     setCurrentIndex((prev) => Math.min(prev, Math.max(cardCount - 1, 0)));
@@ -173,30 +190,121 @@ export function StudyMode({ deck, onExit }: StudyModeProps) {
     setCurrentIndex((prev) => (prev < cardCount - 1 ? prev + 1 : prev));
   }, [cardCount]);
 
-  // 🔥 Difficulty transition logic
-  const handleDifficulty = (level: Difficulty) => {
-    const currentCard = deck.cards[currentIndex];
+  const getNextDifficulty = (
+  current: Difficulty,
+  feedback: Difficulty
+): Difficulty => {
+  if (feedback === 'easy') {
+    if (current === 'easy') return 'medium';
+    if (current === 'medium') return 'hard';
+    return 'hard';
+  }
+
+  if (feedback === 'hard') {
+    if (current === 'hard') return 'medium';
+    if (current === 'medium') return 'easy';
+    return 'easy';
+  }
+
+  return current; // medium stays same
+};
+
+
+ const handleAnswerFeedback = (feedback: Difficulty) => {
+    const currentCard = sortedCards[currentIndex];
     if (!currentCard) return;
 
-    // Save per-card difficulty
-    setDifficultyMap((prev) => ({
+    // ✅ Save performance
+    setPerformanceMap((prev) => ({
       ...prev,
-      [currentCard.id]: level,
+      [currentCard.id]: feedback,
     }));
+     console.log('Feedback:', feedback);
 
-    // 🔥 Transition logic
-    if (level === 'easy') {
-      setCurrentDifficulty('hard'); // increase difficulty
-    } else if (level === 'hard') {
-      setCurrentDifficulty('medium'); // decrease difficulty
-    } else {
-      setCurrentDifficulty('medium'); // stay same
+    // ✅ Compute next difficulty
+  //   const nextDifficulty = getNextDifficulty(
+  //     currentDifficulty,
+  //     feedback
+  //   );
+  //   setCurrentDifficulty(nextDifficulty);
+
+  //   console.log('📊 Feedback:', feedback);
+  //   console.log('🎯 Next Difficulty:', nextDifficulty);
+
+  //   // ✅ Find next matching card
+  //   let nextIndex = deck.cards.findIndex(
+  //     (card, idx) =>
+  //       idx > currentIndex &&
+  //       card.difficulty === nextDifficulty
+  //   );
+
+  //    // ✅ 2. If not found → pick unseen card
+  // if (nextIndex === -1) {
+  //     nextIndex = deck.cards.findIndex(
+  //     (card, idx) =>
+  //       idx > currentIndex &&
+  //       !performanceMap[card.id]
+  //   );
+  // }
+  //  // 5. fallback → sequential
+  // if (nextIndex === -1) {
+  //   nextIndex =
+  //     currentIndex < deck.cards.length - 1
+  //       ? currentIndex + 1
+  //       : currentIndex;
+  // }
+       // 2. determine target difficulty
+  const nextDifficulty =
+    feedback === 'easy'
+      ? 'hard'
+      : feedback === 'hard'
+      ? 'easy'
+      : 'medium';
+
+  // 3. find next BEST match
+  // let nextIndex = sortedCards.findIndex(
+  //   (card, idx) =>
+  //     idx > currentIndex &&
+  //     card.difficulty === nextDifficulty &&
+  //     !performanceMap[card.id]
+  // );
+  let nextIndex = -1;
+
+// 🔥 ONLY check next 2–3 cards (NOT whole deck)
+for (let i = currentIndex + 1; i <= currentIndex + 3 && i < sortedCards.length; i++) {
+  const card = sortedCards[i];
+
+  if (
+    card.difficulty === nextDifficulty &&
+    !performanceMap[card.id]
+  ) {
+    nextIndex = i;
+    break;
+  }
+}
+
+  // 4. fallback: unseen card
+ if (nextIndex === -1) {
+  for (let i = currentIndex + 1; i < sortedCards.length; i++) {
+    if (!performanceMap[sortedCards[i].id]) {
+      nextIndex = i;
+      break;
     }
+  }
+}
 
-    console.log('📊 Card difficulty:', level);
-    console.log('🎯 Next difficulty:', level === 'easy' ? 'hard' : level === 'hard' ? 'medium' : 'medium');
+  // 5. final fallback
+  if (nextIndex === -1) {
+    nextIndex =
+      currentIndex < sortedCards.length - 1
+        ? currentIndex + 1
+        : currentIndex;
+  }
+
+  setCurrentIndex(nextIndex);
   };
 
+  
   // Safety check
   if (cardCount === 0) {
     return (
@@ -217,16 +325,7 @@ export function StudyMode({ deck, onExit }: StudyModeProps) {
     );
   }
    
-  const getNextDifficulty = (
-  current: Difficulty,
-  feedback: Difficulty
-): Difficulty => {
-  if (feedback === 'easy') return 'hard';
-  if (feedback === 'hard') return 'medium';
-  return current; // medium stays same
-};
-
-  const currentCard = deck.cards[currentIndex];
+  const currentCard = sortedCards[currentIndex];
   
   if (!currentCard) return null;
 
@@ -269,26 +368,16 @@ export function StudyMode({ deck, onExit }: StudyModeProps) {
         <FlashCard card={currentCard} />
       </div>
 
-      {/* 🔥 Difficulty Buttons */}
-      <div className="flex justify-center gap-3 mb-6">
-        <button
-          onClick={() => handleDifficulty('easy')}
-          className="px-4 py-2 bg-green-100 border-2 border-green-400 rounded-full font-bold hover:scale-105"
-        >
+     <div className="flex gap-3 justify-center mt-6">
+        <button onClick={() => handleAnswerFeedback('easy')}>
           Easy
         </button>
 
-        <button
-          onClick={() => handleDifficulty('medium')}
-          className="px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-full font-bold hover:scale-105"
-        >
+        <button onClick={() => handleAnswerFeedback('medium')}>
           Medium
         </button>
 
-        <button
-          onClick={() => handleDifficulty('hard')}
-          className="px-4 py-2 bg-red-100 border-2 border-red-400 rounded-full font-bold hover:scale-105"
-        >
+        <button onClick={() => handleAnswerFeedback('hard')}>
           Hard
         </button>
       </div>

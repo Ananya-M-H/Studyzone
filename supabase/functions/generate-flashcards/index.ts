@@ -457,7 +457,7 @@ ${JSON.stringify(cardsList, null, 2)}`;
 /**
  * Generates flashcards from text content
  */
-async function handleGenerateFromText(
+/*async function handleGenerateFromText(
   apiKeys: string[],
   text: string,
   numQuestions: number
@@ -480,12 +480,58 @@ ${text}`;
   const cards = normalizeFlashcards(parsedData);
 
   return jsonResponse(cards);
+}*/
+async function handleGenerateFromText(
+  apiKeys: string[],
+  text: string,
+  numQuestions: number
+): Promise<Response> {
+
+let batches: number[];
+
+if (numQuestions === 1) {
+  batches = [1];
+} else {
+  const firstHalf = Math.ceil(numQuestions / 2);
+  const secondHalf = numQuestions - firstHalf;
+  batches = [firstHalf, secondHalf];
 }
+
+  let allCards: FlashcardData[] = [];
+
+  for (const batchSize of batches) {
+    const prompt = `Create ${batchSize} flashcard questions and answers from this text.
+
+RULES:
+- Respond in the SAME LANGUAGE as the source text
+- Focus on KEY CONCEPTS and important facts
+- Questions should test understanding
+- Answers should be concise (1-3 sentences)
+- Return JSON array: [{ "front": "...", "back": "..." }]
+
+Source text:
+${text}`;
+
+    const responseText = await generateContent(
+      apiKeys,
+      prompt,
+      flashcardArraySchema as Record<string, unknown>
+    );
+
+    const parsedData = parseAIResponse<unknown>(responseText);
+    const cards = normalizeFlashcards(parsedData);
+
+    allCards.push(...cards);
+  }
+
+  return jsonResponse(allCards.slice(0, numQuestions));
+}
+
 
 /**
  * Generates flashcards from PDF content
  */
-async function handleGenerateFromPDF(
+/*async function handleGenerateFromPDF(
   apiKeys: string[],
   pdfBase64: string,
   numQuestions: number
@@ -510,6 +556,48 @@ RULES:
   const cards = normalizeFlashcards(parsedData);
 
   return jsonResponse(cards);
+}*/
+async function handleGenerateFromPDF(
+  apiKeys: string[],
+  pdfBase64: string,
+  numQuestions: number
+): Promise<Response> {
+
+let batches: number[];
+
+if (numQuestions === 1) {
+  batches = [1];
+} else {
+  const firstHalf = Math.ceil(numQuestions / 2);
+  const secondHalf = numQuestions - firstHalf;
+  batches = [firstHalf, secondHalf];
+}
+
+  let allCards: FlashcardData[] = [];
+
+  for (const batchSize of batches) {
+    const prompt = `Create ${batchSize} flashcard questions and answers from this PDF.
+
+RULES:
+- Respond in the SAME LANGUAGE
+- Focus on KEY CONCEPTS
+- Avoid duplicates
+- Return JSON array: [{ "front": "...", "back": "..." }]`;
+
+    const responseText = await generateContent(
+      apiKeys,
+      prompt,
+      flashcardArraySchema as Record<string, unknown>,
+      { mimeType: "application/pdf", data: pdfBase64 }
+    );
+
+    const parsedData = parseAIResponse<unknown>(responseText);
+    const cards = normalizeFlashcards(parsedData);
+
+    allCards.push(...cards);
+  }
+
+  return jsonResponse(allCards.slice(0, numQuestions));
 }
 
 // ============================================================================
